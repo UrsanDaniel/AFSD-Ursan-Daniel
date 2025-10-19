@@ -6,6 +6,7 @@ majuscule = stiri.upper()
 print(majuscule)
 eliminare_spati_stanga = stiri.lstrip()
 eliminare_spati_dreapta = stiri.rstrip()
+
 print(eliminare_spati_stanga , eliminare_spati_dreapta)
 invers = stiri[::-1].upper()
 print(invers)
@@ -14,3 +15,9 @@ print(majuscula_primul_cuv)
 import string
 fara_puncte_de_punctuatie = "".join(ch for ch in stiri if ch not in string.punctuation)
 print(fara_puncte_de_punctuatie)
+import string
+combiantie = stiri.strip()
+combinatie = "".join(ch for ch in stiri if ch not in string.punctuation)
+combiantie = combiantie.upper()
+combinatie = combiantie[::-1]
+print(combinatie)
