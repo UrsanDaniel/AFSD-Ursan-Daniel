@@ -1,0 +1,174 @@
+produse = ["espresso", "latte", "cappuccino", "ceai", "ciocolata calda", "croissant"]
+preturi = [8.0, 12.0, 11.0, 7.0, 10.0, 9.0]
+stoc = [20, 15, 18, 30, 12, 10]
+cant_comanda = [0, 0, 0, 0, 0, 0]
+reducere_curenta_tip = "fara" 
+
+# functii
+def afisare_meniu_produse(produse, preturi, stoc):
+    print("\nMeniu Produse")
+    for i in range(len(produse)):
+        print(f"{i}. {produse[i]:<15} | Pret: {preturi[i]:>5} lei | Stoc: {stoc[i]}")
+
+def adaugare_produs(cant_comanda, stoc, index, cantitate):
+    if 0 <= index < len(cant_comanda):
+        if cantitate > 0:
+            if cant_comanda[index] + cantitate <= stoc[index]:
+                cant_comanda[index] += cantitate
+                print("Produs adaugat cu succes")
+                return True
+            else:
+                print(f"Eroare: Stoc insuficient! Disponibil: {stoc[index] - cant_comanda[index]}")
+        else:
+            print("Eroare: Cantitatea trebuie sa fie pozitiva")
+    else:
+        print("Eroare: Index invalid")
+    return False
+
+def scadere_produs(cant_comanda, index, cantitate):
+    if 0 <= index < len(cant_comanda):
+        if cantitate > 0:
+            if cant_comanda[index] >= cantitate:
+                cant_comanda[index] -= cantitate
+                print("Comanda actualizata")
+                return True
+            else:
+                print("Eroare: Nu poti scadea mai mult decat ai comandat.")
+        else:
+            print("Eroare: Cantitatea trebuie sa fie pozitiva")
+    else:
+        print("Eroare invalid")
+    return False
+
+def calcul_total(cant_comanda, preturi):
+    total = 0.0
+    for i in range(len(cant_comanda)):
+        total += cant_comanda[i] * preturi[i]
+    return total
+
+def stabilire_reducere(total, tip):
+    valoare = 0.0
+    if tip == "student":
+        if total >= 30.0:
+            valoare = 0.10 * total
+        else:
+            print("Total insuficient pentru reducerea de student (min 30 lei).")
+    elif tip == "happy":
+        if total >= 50.0:
+            valoare = 0.15 * total
+        else:
+            print("Total insuficient pentru reducerea Happy (min 50 lei).")
+    elif tip == "cupon":
+        if total >= 25.0:
+            valoare = 7.0
+        else:
+            print("Total insuficient pentru cupon (min 25 lei).")
+    
+    # Protectie
+    if valoare > total:
+        valoare = total
+    return valoare
+
+def afisare_bon(produse, cant_comanda, preturi, total, reducere):
+    print("\n BON FISCAL")
+    for i in range(len(produse)):
+        if cant_comanda[i] > 0:
+            subtotal = cant_comanda[i] * preturi[i]
+            print(f"{produse[i]:<15} x {cant_comanda[i]:>2} = {subtotal:>6.2f} lei")
+    print("-" * 30)
+    print(f"Subtotal:         {total:>6.2f} lei")
+    print(f"Reducere:        -{reducere:>6.2f} lei")
+    print(f"TOTAL FINAL:      {total - reducere:>6.2f} lei")
+    print("----------------------------\n")
+
+def finalizare_comanda(stoc, cant_comanda):
+    for i in range(len(stoc)):
+        stoc[i] -= cant_comanda[i]
+        cant_comanda[i] = 0
+
+def anulare_comanda(cant_comanda):
+    for i in range(len(cant_comanda)):
+        cant_comanda[i] = 0
+
+#1 Bucla meniului
+
+while True:
+    print("\nCAFENEA - MENIU PRINCIPAL")
+    print("1. Afisare meniu produse")
+    print("2. Adaugare produs in comanda")
+    print("3. Scadere/eliminare produs")
+    print("4. Aplicare reducere")
+    print("5. Finalizare comanda")
+    print("6. Anulare comanda")
+    print("0. Iesire")
+    
+    optiune = input("Alegeti optiunea: ")
+
+    if optiune == "1":
+        afisare_meniu_produse(produse, preturi, stoc)
+
+    elif optiune == "2":
+        afisare_meniu_produse(produse, preturi, stoc)
+        try:
+            idx = int(input("Introduceti indexul produsului: "))
+            cant = int(input("Introduceti cantitatea: "))
+            adaugare_produs(cant_comanda, stoc, idx, cant)
+        except ValueError:
+            print("Eroare: Introduceti numere intregi.")
+
+    elif optiune == "3":
+        try:
+            idx = int(input("Introduceti indexul produsului de scos: "))
+            cant = int(input("Introduceti cantitatea de scazut: "))
+            scadere_produs(cant_comanda, idx, cant)
+        except ValueError:
+            print("Eroare: Introduceti numere intregi.")
+
+    elif optiune == "4":
+        total_acum = calcul_total(cant_comanda, preturi)
+        if total_acum == 0:
+            print("Comanda este goala. Nu se pot aplica reduceri.")
+            reducere_curenta_tip = "fara"
+        else:
+            print(f"\nTotal curent: {total_acum:.2f} lei")
+            print("--- Sub-meniu Reduceri ---")
+            print("1. Student (10% la min 30 lei)")
+            print("2. Happy (15% la min 50 lei)")
+            print("3. Cupon (7 lei la min 25 lei)")
+            print("4. Fara reducere")
+            print("5. Inapoi")
+            sub_opt = input("Alegeti reducerea: ")
+            
+            if sub_opt == "1": reducere_curenta_tip = "student"
+            elif sub_opt == "2": reducere_curenta_tip = "happy"
+            elif sub_opt == "3": reducere_curenta_tip = "cupon"
+            elif sub_opt == "4": reducere_curenta_tip = "fara"
+            
+            # Validam pragul
+            if sub_opt in ["1", "2", "3"]:
+                val = stabilire_reducere(total_acum, reducere_curenta_tip)
+                if val == 0: reducere_curenta_tip = "fara"
+                else: print(f"Reducere '{reducere_curenta_tip}' aplicata!")
+
+    elif optiune == "5":
+        total_fara = calcul_total(cant_comanda, preturi)
+        if total_fara == 0:
+            print("Nu exista produse in comanda.")
+        else:
+            # Recapitulare reducere
+            val_reducere = stabilire_reducere(total_fara, reducere_curenta_tip)
+            afisare_bon(produse, cant_comanda, preturi, total_fara, val_reducere)
+            finalizare_comanda(stoc, cant_comanda)
+            reducere_curenta_tip = "fara"
+            print("Comanda a fost finalizata. Stoc actualizat.")
+
+    elif optiune == "6":
+        anulare_comanda(cant_comanda)
+        reducere_curenta_tip = "fara"
+        print("Comanda a fost anulata.")
+
+    elif optiune == "0":
+        print("La revedere!")
+        break
+    else:
+        print("Optiune invalida.")
