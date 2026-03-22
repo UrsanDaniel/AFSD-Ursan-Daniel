@@ -1,0 +1,230 @@
+import csv
+import json
+
+
+def citeste_produse_csv(fisier):
+    produse = {}
+    try:
+        with open(fisier, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                produse[row['id']] = {
+                    "nume": row['nume'],
+                    "pret": float(row['pret']),
+                    "stoc": int(row['stoc'])
+                }
+    except FileNotFoundError:
+        print(f"Eroare: Fisierul {fisier} nu exista.")
+    return produse
+
+
+def citeste_reduceri_json(fisier):
+    try:
+        with open(fisier, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Eroare: Fisierul {fisier} nu exista.")
+        return {}
+
+
+def afiseaza_meniu(produse):
+    print("\n--- MENIU PRODUSE ---")
+    for id_p, info in produse.items():
+        print(f"ID: {id_p} | {info['nume']} | Pret: {info['pret']} RON | Stoc: {info['stoc']}")
+
+
+def salveaza_stoc_csv(fisier, produse):
+    with open(fisier, 'w', encoding='utf-8', newline='') as f:
+        fieldnames = ['id', 'nume', 'pret', 'stoc']
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for id_p, info in produse.items():
+            writer.writerow({
+                'id': id_p,
+                'nume': info['nume'],
+                'pret': info['pret'],
+                'stoc': info['stoc']
+            })
+
+def adauga_produs(comanda, produse, id_produs, cantitate):
+    if id_produs not in produse:
+        print(f"Eroare: ID-ul '{id_produs}' nu exista in lista de produse!")
+        print(f"ID-uri disponibile: {list(produse.keys())}")
+        return
+
+    if cantitate <= 0:
+        print("Eroare: Cantitatea trebuie sa fie mai mare ca 0!")
+        return
+
+    stoc_disponibil = produse[id_produs]['stoc']
+    stoc_deja_comandat = comanda.get(id_produs, 0)
+
+    if stoc_disponibil - stoc_deja_comandat < cantitate:
+        print(f"Eroare: Nu avem destul stoc. Disponibil: {stoc_disponibil - stoc_deja_comandat}")
+        return
+
+    comanda[id_produs] = stoc_deja_comandat + cantitate
+    print(f"Succes: {produse[id_produs]['nume']} a fost adaugat in comanda.")
+
+
+def scade_produs(comanda, id_produs, cantitate):
+    if id_produs not in comanda:
+        print("Produsul nu este in comanda.")
+        return
+    if cantitate <= 0:
+        print("Cantitatea trebuie sa fie pozitiva.")
+        return
+
+    if id_produs not in comanda:
+        print("Produsul nu este in comanda.")
+    elif cantitate > comanda[id_produs]:
+
+        print(f"Eroare: Ai doar {comanda[id_produs]} unitati in comanda.")
+    elif cantitate == comanda[id_produs]:
+
+        del comanda[id_produs]
+        print("Produs eliminat complet din comanda.")
+    else:
+
+        comanda[id_produs] -= cantitate
+        print(f"S-au scazut {cantitate} unitati. Ramase: {comanda[id_produs]}")
+
+
+
+def calculeaza_total(comanda, produse):
+    total = 0.0
+    for id_p, cant in comanda.items():
+        total += produse[id_p]['pret'] * cant
+    return total
+
+
+def calculeaza_reducere(total, tip_reducere, reduceri):
+    if tip_reducere not in reduceri:
+        return 0.0
+
+    regula = reduceri[tip_reducere]
+    if total < regula['prag']:
+        print(f"Pragul de {regula['prag']} RON nu a fost atins.")
+        return 0.0
+
+    if regula['tip'] == "procent":
+        return total * (regula['valoare'] / 100)
+    elif regula['tip'] == "fix":
+        return float(regula['valoare'])
+    return 0.0
+
+
+def genereaza_bon(comanda, produse, total, reducere):
+    bon = "--- BON FISCAL ---\n"
+    for id_p, cant in comanda.items():
+        nume = produse[id_p]['nume']
+        pret = produse[id_p]['pret']
+        subtotal = pret * cant
+        bon += f"{nume} x {cant} | {pret} RON/buc | Subtotal: {subtotal} RON\n"
+
+    bon += "-" * 20 + "\n"
+    bon += f"Total fara reducere: {total} RON\n"
+    bon += f"Reducere aplicata: {reducere} RON\n"
+    bon += f"TOTAL FINAL: {total - reducere} RON\n"
+    return bon
+
+
+def scrie_bon_txt(fisier, text_bon):
+    with open(fisier, 'w', encoding='utf-8') as f:
+        f.write(text_bon)
+
+
+def goleste_comanda(comanda):
+    comanda.clear()
+
+
+def main():
+    produse = citeste_produse_csv('produse.csv')
+    reduceri = citeste_reduceri_json('reduceri.json')
+    comanda = {}
+    reducere_curenta = ""
+
+    while True:
+        print(
+            "\n1 - Afisare meniu produse\n2 - Adaugare produs\n3 - Scadere produs\n4 - Aplicare reducere\n5 - Finalizare\n6 - Anulare\n0 - Iesire")
+        optiune = input("Alege optiune: ")
+
+        if optiune == "1":
+            afiseaza_meniu(produse)
+
+        elif optiune == "2":
+            id_p = input("ID produs: ")
+            try:
+                cant = int(input("Cantitate: "))
+                adauga_produs(comanda, produse, id_p, cant)
+            except ValueError:
+                print("Cantitate invalida.")
+
+        elif optiune == "3":
+            id_p = input("ID produs: ")
+            try:
+                cant = int(input("Cantitate de scazut: "))
+                scade_produs(comanda, id_p, cant)
+            except ValueError:
+                print("Cantitate invalida.")
+
+        elif optiune == "4":
+            total = calculeaza_total(comanda, produse)
+            if total == 0:
+                print("Comanda este goala.")
+                continue
+
+            print("1 - student\n2 - happy\n3 - cupon\n4 - fara reducere\n0 - inapoi")
+            opt_r = input("Selecteaza: ")
+            mapping = {"1": "student", "2": "happy", "3": "cupon", "4": ""}
+            if opt_r in mapping:
+                reducere_curenta = mapping[opt_r]
+                print(f"Reducere setata: {reducere_curenta if reducere_curenta else 'Niciuna'}")
+
+
+        elif optiune == "5":
+
+            if not comanda:
+                print("Comanda este goala.")
+
+                continue
+
+            total = calculeaza_total(comanda, produse)
+
+            val_red = calculeaza_reducere(total, reducere_curenta, reduceri)
+
+            bon_text = genereaza_bon(comanda, produse, total, val_red)
+
+            print(bon_text)
+
+            scrie_bon_txt('bon.txt', bon_text)
+
+
+            for id_p, cant in comanda.items():
+                produse[id_p]['stoc'] -= cant
+
+
+
+            salveaza_stoc_csv('produse.csv', produse)
+
+
+
+            goleste_comanda(comanda)
+
+            reducere_curenta = ""
+
+            print("Comanda finalizata. Stocul a fost salvat in produse.csv.")
+
+        elif optiune == "6":
+            goleste_comanda(comanda)
+            reducere_curenta = ""
+            print("Comanda anulata.")
+
+        elif optiune == "0":
+            break
+        else:
+            print("Optiune invalida.")
+
+
+if __name__ == "__main__":
+    main()
