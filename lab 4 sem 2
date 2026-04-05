@@ -1,0 +1,158 @@
+import json
+import os
+
+# --- LOGICA DE SORTARE (Quicksort) ---
+
+def compara_competitori(c1, c2):
+    """
+    Returneaza True daca c1 ar trebui sa fie inaintea lui c2 in clasament.
+    Criterii: 1. Punctaj descrescator, 2. Timp crescator, 3. Nume alfabetic.
+    """
+    if c1['punctaj'] > c2['punctaj']:
+        return True
+    if c1['punctaj'] < c2['punctaj']:
+        return False
+    
+    # Punctaje egale -> verificam timpul (mai mic e mai bun)
+    if c1['timp'] < c2['timp']:
+        return True
+    if c1['timp'] > c2['timp']:
+        return False
+    
+    # Punctaj si timp egale -> nume alfabetic
+    return c1['nume'].lower() < c2['nume'].lower()
+
+def quicksort(lista):
+    if len(lista) <= 1:
+        return lista
+    
+    pivot = lista[len(lista) // 2]
+    stanga = [x for x in lista if compara_competitori(x, pivot)]
+    mijloc = [x for x in lista if x['punctaj'] == pivot['punctaj'] and 
+              x['timp'] == pivot['timp'] and 
+              x['nume'].lower() == pivot['nume'].lower()]
+    dreapta = [x for x in lista if not compara_competitori(x, pivot) and x not in mijloc]
+    
+    return quicksort(stanga) + mijloc + quicksort(dreapta)
+
+# --- GESTIONARE DATE ---
+
+def incarca_date(nume_fisier):
+    if not os.path.exists(nume_fisier):
+        return []
+    try:
+        with open(nume_fisier, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Eroare la citirea fisierului: {e}")
+        return []
+
+def salveaza_date(nume_fisier, date):
+    with open(nume_fisier, 'w', encoding='utf-8') as f:
+        json.dump(date, f, indent=2)
+
+# --- FUNCTII APLICATIE ---
+
+def afiseaza_clasament(competitori):
+    if not competitori:
+        print("\n[!] Lista este goala.")
+        return
+
+    ordonati = quicksort(competitori)
+    print("\n--- CLASAMENT FINAL ---")
+    print(f"{'Loc':<5} {'Nume':<20} {'Punctaj':<10} {'Timp':<10}")
+    print("-" * 45)
+
+    loc_curent = 1
+    for i in range(len(ordonati)):
+        # Verificare egalitate pentru pozitie (fara criteriul nume)
+        if i > 0:
+            c_actual = ordonati[i]
+            c_prev = ordonati[i-1]
+            if not (c_actual['punctaj'] == c_prev['punctaj'] and c_actual['timp'] == c_prev['timp']):
+                loc_curent = i + 1
+        
+        c = ordonati[i]
+        print(f"{loc_curent:<5} {c['nume']:<20} {c['punctaj']:<10} {c['timp']:<10}")
+
+def afiseaza_statistici(competitori):
+    if not competitori:
+        print("\n[!] Nu exista date pentru statistici.")
+        return
+
+    punctaje = [c['punctaj'] for c in competitori]
+    timpi = [c['timp'] for c in competitori]
+
+    print("\n--- STATISTICI COMPETITIE ---")
+    print(f"Total competitori: {len(competitori)}")
+    print(f"Punctaj maxim:    {max(punctaje)}")
+    print(f"Punctaj minim:    {min(punctaje)}")
+    print(f"Media punctajelor: {sum(punctaje)/len(punctaje):.2f}")
+    print(f"Cel mai bun timp:  {min(timpi)}")
+
+# --- MENIU INTERACTIV ---
+
+def meniu():
+    fisier = "competitori.json"
+    competitori = incarca_date(fisier)
+
+    while True:
+        print("\n=== SISTEM RANKING SPORTIV ===")
+        print("1. Afiseaza lista bruta")
+        print("2. Adauga competitor")
+        print("3. Actualizeaza rezultate")
+        print("4. Afiseaza Clasament (Quicksort)")
+        print("5. Statistici")
+        print("6. Salveaza si Iesi")
+        
+        optiune = input("\nAlegeti optiunea: ")
+
+        if optiune == "1":
+            for c in competitori:
+                print(f"Nume: {c['nume']} | Punctaj: {c['punctaj']} | Timp: {c['timp']}")
+        
+        elif optiune == "2":
+            nume = input("Nume competitor: ").strip()
+            if not nume:
+                print("[Eroare] Numele nu poate fi gol!")
+                continue
+            try:
+                punctaj = int(input("Punctaj: "))
+                timp = int(input("Timp: "))
+                competitori.append({"nume": nume, "punctaj": punctaj, "timp": timp})
+                print("[Succes] Competitor adaugat.")
+            except ValueError:
+                print("[Eroare] Punctajul si timpul trebuie sa fie numere intregi.")
+
+        elif optiune == "3":
+            nume_cautat = input("Numele competitorului pentru actualizare: ")
+            gasit = False
+            for c in competitori:
+                if c['nume'].lower() == nume_cautat.lower():
+                    try:
+                        c['punctaj'] = int(input("Punctaj nou: "))
+                        c['timp'] = int(input("Timp nou: "))
+                        print("[Succes] Date actualizate.")
+                        gasit = True
+                        break
+                    except ValueError:
+                        print("[Eroare] Introduceti valori numerice valide.")
+                        gasit = True # Evitam mesajul de "negasit" daca eroarea e la input
+            if not gasit:
+                print("[Eroare] Competitorul nu a fost gasit.")
+
+        elif optiune == "4":
+            afiseaza_clasament(competitori)
+
+        elif optiune == "5":
+            afiseaza_statistici(competitori)
+
+        elif optiune == "6":
+            salveaza_date(fisier, competitori)
+            print("Date salvate. La revedere!")
+            break
+        else:
+            print("Optiune invalida.")
+
+if __name__ == "__main__":
+    meniu()
