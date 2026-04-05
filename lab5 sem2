@@ -1,0 +1,131 @@
+import time
+import random
+import sys
+import csv  
+
+sys.setrecursionlimit(10000)
+
+class SortMetrics:
+    def __init__(self):
+        self.comparisons = 0
+        self.moves = 0
+
+    def reset(self):
+        self.comparisons = 0
+        self.moves = 0
+
+
+def bubble_sort(arr, metrics):
+    n = len(arr)
+    for i in range(n):
+        swapped = False
+        for j in range(0, n - i - 1):
+            metrics.comparisons += 1
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                metrics.moves += 1
+                swapped = True
+        if not swapped: break
+
+def quick_sort(arr, low, high, metrics):
+    if low < high:
+        pivot_idx = partition(arr, low, high, metrics)
+        quick_sort(arr, low, pivot_idx - 1, metrics)
+        quick_sort(arr, pivot_idx + 1, high, metrics)
+
+def partition(arr, low, high, metrics):
+    pivot = arr[high]
+    i = low - 1
+    for j in range(low, high):
+        metrics.comparisons += 1
+        if arr[j] <= pivot:
+            i += 1
+            arr[i], arr[j] = arr[j], arr[i]
+            metrics.moves += 1
+    arr[i + 1], arr[high] = arr[high], arr[i + 1]
+    metrics.moves += 1
+    return i + 1
+
+def merge_sort(arr, metrics):
+    if len(arr) > 1:
+        mid = len(arr) // 2
+        L, R = arr[:mid], arr[mid:]
+        merge_sort(L, metrics); merge_sort(R, metrics)
+        i = j = k = 0
+        while i < len(L) and j < len(R):
+            metrics.comparisons += 1
+            if L[i] < R[j]: arr[k] = L[i]; i += 1
+            else: arr[k] = R[j]; j += 1
+            metrics.moves += 1; k += 1
+        while i < len(L): arr[k] = L[i]; i += 1; k += 1; metrics.moves += 1
+        while j < len(R): arr[k] = R[j]; j += 1; k += 1; metrics.moves += 1
+
+
+def generate_data(size, data_type):
+    if data_type == "aleator": return [random.randint(0, size * 10) for _ in range(size)]
+    if data_type == "sortat": return list(range(size))
+    if data_type == "descrescator": return list(range(size, 0, -1))
+    if data_type == "duplicate": return [random.randint(0, 10) for _ in range(size)]
+    if data_type == "aproape sortat":
+        arr = list(range(size))
+        for _ in range(size // 10):
+            idx1, idx2 = random.randint(0, size-1), random.randint(0, size-1)
+            arr[idx1], arr[idx2] = arr[idx2], arr[idx1]
+        return arr
+
+
+def run_benchmarks():
+    random.seed(42)
+    sizes = [100, 500, 1000, 2000, 5000] # Poti ajusta aceste valori
+    types = ["aleator", "sortat", "descrescator", "duplicate", "aproape sortat"]
+    runs = 3
+    
+    metrics = SortMetrics()
+    file_name = "rezultate_sortare.csv"
+
+    # Pregătim fișierul CSV și scriem capul de tabel
+    with open(file_name, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Algoritm", "Dimensiune", "Tip Intrare", "Timp Mediu (s)", "Comparatii", "Mutari"])
+
+        print(f"{'Algoritm':<12} | {'Dim':<6} | {'Tip':<15} | {'Timp Mediu (s)':<12}")
+        print("-" * 60)
+
+        for size in sizes:
+            for t in types:
+                original_data = generate_data(size, t)
+                algorithms = [
+                    ("Bubble Sort", lambda a, m: bubble_sort(a, m)),
+                    ("Quick Sort", lambda a, m: quick_sort(a, 0, len(a) - 1, m)),
+                    ("Merge Sort", lambda a, m: merge_sort(a, m))
+                ]
+
+                for name, func in algorithms:
+                    if name == "Bubble Sort" and size > 2000: continue
+
+                    total_time, total_comps, total_moves = 0, 0, 0
+                    
+                    for _ in range(runs):
+                        data_copy = original_data.copy()
+                        metrics.reset()
+                        start = time.perf_counter() # Mai precis decat time.time()
+                        func(data_copy, metrics)
+                        end = time.perf_counter()
+                        
+                        total_time += (end - start)
+                        total_comps += metrics.comparisons
+                        total_moves += metrics.moves
+                    
+                    avg_time = total_time / runs
+                    avg_comps = total_comps // runs
+                    avg_moves = total_moves // runs
+
+                    writer.writerow([name, size, t, f"{avg_time:.6f}", avg_comps, avg_moves])
+                    
+
+                    print(f"{name:<12} | {size:<6} | {t:<15} | {avg_time:<12.6f}")
+
+    print(f"\n[Succes] Testele s-au terminat. Rezultatele au fost salvate în '{file_name}'.")
+
+if __name__ == "__main__":
+    run_benchmarks()
