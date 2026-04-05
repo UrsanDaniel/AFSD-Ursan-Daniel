@@ -1,7 +1,6 @@
 import json
 import os
 
-# --- LOGICA DE SORTARE (Quicksort) ---
 
 def compara_competitori(c1, c2):
     """
@@ -13,13 +12,11 @@ def compara_competitori(c1, c2):
     if c1['punctaj'] < c2['punctaj']:
         return False
     
-    # Punctaje egale -> verificam timpul (mai mic e mai bun)
     if c1['timp'] < c2['timp']:
         return True
     if c1['timp'] > c2['timp']:
         return False
     
-    # Punctaj si timp egale -> nume alfabetic
     return c1['nume'].lower() < c2['nume'].lower()
 
 def quicksort(lista):
@@ -35,7 +32,6 @@ def quicksort(lista):
     
     return quicksort(stanga) + mijloc + quicksort(dreapta)
 
-# --- GESTIONARE DATE ---
 
 def incarca_date(nume_fisier):
     if not os.path.exists(nume_fisier):
@@ -51,7 +47,6 @@ def salveaza_date(nume_fisier, date):
     with open(nume_fisier, 'w', encoding='utf-8') as f:
         json.dump(date, f, indent=2)
 
-# --- FUNCTII APLICATIE ---
 
 def afiseaza_clasament(competitori):
     if not competitori:
@@ -65,7 +60,7 @@ def afiseaza_clasament(competitori):
 
     loc_curent = 1
     for i in range(len(ordonati)):
-        # Verificare egalitate pentru pozitie (fara criteriul nume)
+
         if i > 0:
             c_actual = ordonati[i]
             c_prev = ordonati[i-1]
@@ -90,7 +85,6 @@ def afiseaza_statistici(competitori):
     print(f"Media punctajelor: {sum(punctaje)/len(punctaje):.2f}")
     print(f"Cel mai bun timp:  {min(timpi)}")
 
-# --- MENIU INTERACTIV ---
 
 def meniu():
     fisier = "competitori.json"
@@ -137,7 +131,7 @@ def meniu():
                         break
                     except ValueError:
                         print("[Eroare] Introduceti valori numerice valide.")
-                        gasit = True # Evitam mesajul de "negasit" daca eroarea e la input
+                        gasit = True 
             if not gasit:
                 print("[Eroare] Competitorul nu a fost gasit.")
 
