@@ -1,0 +1,56 @@
+import random
+import matplotlib.pyplot as plt
+
+def genereaza_date(dimensiune):
+    vector = list(range(1, dimensiune + 1))
+    random.shuffle(vector)
+    valoare_cautata = random.choice(vector)
+    return vector, valoare_cautata
+
+def cautare_las_vegas(vector, valoare_cautata):
+    indici = list(range(len(vector)))
+    random.shuffle(indici)
+    pasi = 0
+    for idx in indici:
+        pasi += 1
+        if vector[idx] == valoare_cautata:
+            return idx, pasi
+    return -1, pasi
+
+def ruleaza_experimente_proiect2():
+    dimensiuni = [100, 1000, 10000]
+    numar_rulari = 30
+    rezultate_pasi = {}
+    
+    print("--- Rezultate Experimente Las Vegas ---")
+    for dim in dimensiuni:
+        vector, valoare = genereaza_date(dim)
+        pasi_rulari = []
+        for _ in range(numar_rulari):
+            _, pasi = cautare_las_vegas(vector, valoare)
+            pasi_rulari.append(pasi)
+        
+        rezultate_pasi[dim] = pasi_rulari
+        min_pasi = min(pasi_rulari)
+        max_pasi = max(pasi_rulari)
+        med_pasi = sum(pasi_rulari) / numar_rulari
+        print(f"Dimensiune {dim:5}: Min={min_pasi:5}, Max={max_pasi:5}, Medie={med_pasi:6.1f}")
+
+    plt.figure(figsize=(10, 5))
+    dim_analizata = 1000
+    pasi_1000 = rezultate_pasi[dim_analizata]
+
+    plt.bar(range(1, numar_rulari + 1), pasi_1000, color='skyblue', edgecolor='black', label='Pasi pe rulare')
+    plt.axhline(y=sum(pasi_1000)/numar_rulari, color='red', linestyle='--', label=f'Media ({sum(pasi_1000)/numar_rulari:.1f})')
+    plt.axhline(y=dim_analizata, color='purple', linestyle=':', label=f'Limita maxima posibila ({dim_analizata})')
+
+    plt.title(f'Variatia numarului de pasi in {numar_rulari} rulari succesive (Dimensiune vector = {dim_analizata})')
+    plt.xlabel('Numarul rularii independente')
+    plt.ylabel('Numar de pasi pana la gasire')
+    plt.legend()
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+    plt.savefig('proiect2_las_vegas.png')
+    plt.show()
+
+ruleaza_experimente_proiect2()
