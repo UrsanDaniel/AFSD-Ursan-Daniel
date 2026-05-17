@@ -1,0 +1,109 @@
+import random
+import matplotlib.pyplot as plt
+
+CANDIDATI = [
+    {"id": "C1", "cost": 10, "scor": 85},
+    {"id": "C2", "cost": 15, "scor": 90},
+    {"id": "C3", "cost": 7, "scor": 60},
+    {"id": "C4", "cost": 20, "scor": 110},
+    {"id": "C5", "cost": 12, "scor": 75},
+    {"id": "C6", "cost": 5, "scor": 40},
+    {"id": "C7", "cost": 18, "scor": 95},
+    {"id": "C8", "cost": 9, "scor": 70},
+    {"id": "C9", "cost": 25, "scor": 130},
+    {"id": "C10", "cost": 14, "scor": 88}
+]
+BUGET_MAXIM = 50
+
+print("--- Lista Candidati Disponibili ---")
+for c in CANDIDATI:
+    print(f"ID: {c['id']:3} | Cost: {c['cost']:2} | Scor: {c['scor']:3}")
+print(f"Buget Maxim: {BUGET_MAXIM}\n")
+
+
+def calculeaza_fitness(cromozom):
+    cost_total = 0
+    scor_total = 0
+    for i, gena in enumerate(cromozom):
+        if gena == 1:
+            cost_total += CANDIDATI[i]["cost"]
+            scor_total += CANDIDATI[i]["scor"]
+    if cost_total > BUGET_MAXIM:
+        return 0, cost_total, scor_total
+    return scor_total, cost_total, scor_total
+
+
+def genereaza_populatie(dimensiune_pop):
+    numar_gene = len(CANDIDATI)
+    populatie = []
+    for _ in range(dimensiune_pop):
+        cromozom = [random.randint(0, 1) for _ in range(numar_gene)]
+        populatie.append(cromozom)
+    return populatie
+
+
+def selectie_turneu(populatie, dimensiune_turneu=3):
+    participanti = random.sample(populatie, dimensiune_turneu)
+    return max(participanti, key=lambda ind: calculeaza_fitness(ind)[0])
+
+
+def crossover_unipunct(parinte1, parinte2):
+    if random.random() < 0.8:
+        punct = random.randint(1, len(parinte1) - 1)
+        copil1 = parinte1[:punct] + parinte2[punct:]
+        copil2 = parinte2[:punct] + parinte1[punct:]
+        return copil1, copil2
+    return parinte1.copy(), parinte2.copy()
+
+
+def mutatie(cromozom, rata_mutatie=0.1):
+    for i in range(len(cromozom)):
+        if random.random() < rata_mutatie:
+            cromozom[i] = 1 - cromozom[i]
+
+
+def ruleaza_algoritm_genetic(dim_pop=30, nr_generatii=50):
+    populatie = genereaza_populatie(dim_pop)
+    istoric_best_fitness = []
+
+    for gen in range(nr_generatii):
+        noua_populatie = []
+        cel_mai_bun = max(populatie, key=lambda ind: calculeaza_fitness(ind)[0])
+        noua_populatie.append(cel_mai_bun.copy())
+
+        while len(noua_populatie) < dim_pop:
+            p1 = selectie_turneu(populatie)
+            p2 = selectie_turneu(populatie)
+            c1, c2 = crossover_unipunct(p1, p2)
+            mutatie(c1)
+            mutatie(c2)
+            noua_populatie.append(c1)
+            if len(noua_populatie) < dim_pop:
+                noua_populatie.append(c2)
+
+        populatie = noua_populatie
+        best_gen = max(populatie, key=lambda ind: calculeaza_fitness(ind)[0])
+        istoric_best_fitness.append(calculeaza_fitness(best_gen)[0])
+
+    solutie_finala = max(populatie, key=lambda ind: calculeaza_fitness(ind)[0])
+    fitness, cost, scor = calculeaza_fitness(solutie_finala)
+    echipa_aleasa = [CANDIDATI[i]["id"] for i, gena in enumerate(solutie_finala) if gena == 1]
+
+    print("--- Rezultat Algoritm Genetic ---")
+    print(f"Cea mai buna echipa gasita: {echipa_aleasa}")
+    print(f"Cost Total: {cost} (Buget Maxim: {BUGET_MAXIM})")
+    print(f"Scor Total (Competenta): {scor}")
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, nr_generatii + 1), istoric_best_fitness, marker='o', color='darkgreen', linestyle='-',
+             label='Cel mai bun fitness')
+    plt.title('Evolutia scorului echipei (Fitness) de-a lungul generatiilor')
+    plt.xlabel('Generatie')
+    plt.ylabel('Fitness (Scor total)')
+    plt.legend()
+    plt.grid(True, linestyle=':')
+    plt.savefig('proiect3_algoritm_genetic.png')
+    plt.show()
+
+
+ruleaza_algoritm_genetic()
