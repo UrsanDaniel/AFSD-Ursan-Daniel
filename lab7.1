@@ -1,0 +1,46 @@
+import random
+import matplotlib.pyplot as plt
+
+def joaca_runda():
+    zar1 = random.randint(1, 6)
+    zar2 = random.randint(1, 6)
+    suma = zar1 + zar2
+    return suma in (7, 11)
+
+def simuleaza_montecarlo(N):
+    castiguri = sum(1 for i in range(N) if joaca_runda())
+    return castiguri / N
+
+def ruleaza_experimente_proiect1():
+    valori_N = [100, 1000, 10000, 100000]
+    numar_repetari = 5
+    rezultate = {N: [] for N in valori_N}
+
+    print("--- Rezultate Experimente Monte Carlo ---")
+    for N in valori_N:
+        for i in range(numar_repetari):
+            prob = simuleaza_montecarlo(N)
+            rezultate[N].append(prob)
+        print(f"Pentru N = {N:7,}: Estimari = {[round(p, 4) for p in rezultate[N]]}")
+
+    plt.figure(figsize=(10, 6))
+    probabilitate_teoretica = 8 / 36
+    plt.axhline(y=probabilitate_teoretica, color='r', linestyle='--', label=f'Probabilitate teoretica ({probabilitate_teoretica:.4f})')
+
+    for N in valori_N:
+        plt.scatter([N] * numar_repetari, rezultate[N], color='blue', alpha=0.6, edgecolors='black')
+
+    medii = [sum(rezultate[N])/numar_repetari for N in valori_N]
+    plt.plot(valori_N, medii, color='green', linestyle='-', marker='o', label='Media estimarilor')
+
+    plt.xscale('log')
+    plt.title('Convergenta Estimarii Monte Carlo in functie de N')
+    plt.xlabel('Numar de simulari (N) - Scara Logaritmica')
+    plt.ylabel('Probabilitate Estimata')
+    plt.legend()
+    plt.grid(True, which="both", linestyle="--", alpha=0.5)
+
+    plt.savefig('proiect1_monte_carlo.png')
+    plt.show()
+
+ruleaza_experimente_proiect1()
