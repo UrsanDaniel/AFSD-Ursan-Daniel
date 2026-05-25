@@ -1,0 +1,101 @@
+import socket
+import threading
+import tkinter as tk
+from tkinter import font
+import json
+
+class CollaborativeEditor:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Editor Colaborativ")
+        
+        toolbar = tk.Frame(self.root, bg="#eeeeee", bd=1, relief=tk.RAISED)
+        toolbar.pack(side=tk.TOP, fill=tk.X)
+        
+        tk.Label(toolbar, text="Font: ", bg="#eeeeee").pack(side=tk.LEFT, padx=5)
+        
+        self.font_sizes = ["12", "14", "16", "18", "24", "32"]
+        self.current_size = tk.StringVar(value="14")
+        
+        font_menu = tk.OptionMenu(toolbar, self.current_size, *self.font_sizes, command=self.update_local_font)
+        font_menu.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        self.text_area = tk.Text(self.root, wrap='word')
+        self.text_area.pack(expand=True, fill='both')
+        
+        self.update_local_font(self.current_size.get())
+        
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self.client.connect(('127.0.0.1', 55555))
+        except:
+            return
+
+        self.text_area.bind('<KeyPress>', self.on_key_press)
+
+        receive_thread = threading.Thread(target=self.receive_events_from_server)
+        receive_thread.daemon = True
+        receive_thread.start()
+
+    def update_local_font(self, size):
+        tag_name = f"font_size_{size}"
+        if tag_name not in self.text_area.tag_names():
+            new_font = font.Font(family="Arial", size=int(size))
+            self.text_area.tag_configure(tag_name, font=new_font)
+        
+        self.text_area.configure(font=font.Font(family="Arial", size=int(size)))
+
+    def on_key_press(self, event):
+        self.root.after(10, self.send_last_char_to_server, event)
+
+    def send_last_char_to_server(self, event):
+        if event.keysym in ['Shift_L', 'Shift_R', 'Control_L', 'Control_R', 'Alt_L', 'Alt_R', 'Caps_Lock']:
+            return
+
+        cursor_pos = self.text_area.index(tk.INSERT)
+        char_pos = self.text_area.index(f"{cursor_pos} - 1 chars")
+        char_written = self.text_area.get(char_pos)
+        font_size = self.current_size.get()
+
+        tag_name = f"font_size_{font_size}"
+        self.text_area.tag_add(tag_name, char_pos, cursor_pos)
+
+        data = {
+            "char": char_written,
+            "pos": char_pos,
+            "font_size": font_size,
+            "keysym": event.keysym
+        }
+        
+        try:
+            self.client.send(json.dumps(data).encode('utf-8'))
+        except:
+            pass
+
+    def receive_events_from_server(self):
+        while True:
+            try:
+                message = self.client.recv(4096).decode('utf-8')
+                if message:
+                    data = json.loads(message)
+                    tag_name = f"font_size_{data['font_size']}"
+                    
+                    if tag_name not in self.text_area.tag_names():
+                        new_font = font.Font(family="Arial", size=int(data['font_size']))
+                        self.text_area.tag_configure(tag_name, font=new_font)
+
+                    if data['keysym'] == "BackSpace":
+                        self.text_area.delete(data['pos'])
+                    else:
+                        self.text_area.insert(data['pos'], data['char'])
+                        end_pos = self.text_area.index(f"{data['pos']} + 1 chars")
+                        self.text_area.tag_add(tag_name, data['pos'], end_pos)
+            except:
+                self.client.close()
+                break
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.geometry("600x450")
+    CollaborativeEditor(root)
+    root.mainloop()
